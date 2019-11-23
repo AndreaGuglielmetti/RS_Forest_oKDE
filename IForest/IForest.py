@@ -52,3 +52,15 @@ class IForest:
             wait(futures)
             depths = np.asarray([future.result() for future in futures]).T
         return depths
+
+    def score(self, X: np.ndarray):
+        with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
+            futures = []
+            for i in range(self.n_estimators):
+                futures.append(executor.submit(self.trees[i].score, X))
+            wait(futures)
+            score = np.sum([future.result() for future in futures])
+        return score
+
+    def _compute_score(self, leaf_size, log_scale_ratio):
+        res = np.exp(np.log(leaf_size) - log_scale_ratio - np.log(self.max_samples))

@@ -11,9 +11,10 @@ class INode:
     boundaries: np.ndarray
     splitAtt: int
     splitValue: int
+    logScaledRatio: float
 
     # Fit the node and eventually create its children
-    def fit(self, X: np.ndarray, e: int, l: int, fw: np.ndarray):
+    def fit(self, X: np.ndarray, e: int, l: int, fw: np.ndarray, logScaleRatio=0.):
         self.leaf = True
         self.size = X.shape[0]
         self.boundaries = np.apply_along_axis(lambda x: (x.min(), x.max()), axis=0, arr=X).T
@@ -27,13 +28,16 @@ class INode:
             self.splitAtt = np.random.choice(indices, p=fw[indices]/sum(fw[indices]))
             self.splitValue = np.random.uniform(self.boundaries[self.splitAtt][0],
                                                 self.boundaries[self.splitAtt][1])
+
+            self.logScaleRatio = logScaleRatio + max(np.log(self.splitValue - self.boundaries[0]), 0)
+
             # Build child nodes using multithreading
             futures = []
             with ThreadPoolExecutor(max_workers=2) as executor:
                 futures.append(executor.submit(INode().fit,
-                                               X[X[:, self.splitAtt] <= self.splitValue], e + 1, l, fw))
+                                               X[X[:, self.splitAtt] <= self.splitValue], e + 1, l, fw, self.logScaleRatio))
                 futures.append(executor.submit(INode().fit,
-                                               X[X[:, self.splitAtt] > self.splitValue], e + 1, l, fw))
+                                               X[X[:, self.splitAtt] > self.splitValue], e + 1, l, fw, self.logScaleRatio))
             wait(futures)
             self.left = futures[0].result()
             self.right = futures[1].result()
@@ -47,6 +51,15 @@ class INode:
             return self.left.profile(x, e + 1)
         else:  # x[self.splitAtt] > self.splitValue
             return self.right.profile(x, e + 1)
+
+    def score(self, x:np.ndarray):
+        if self.leaf:
+             return self.size, self.logScaleRatio
+        elif x[self.splitAtt] <= self.splitValue:
+            return self.left.score(x)
+        else:
+            return self.right.score(x)
+        pass
 
     @staticmethod
     def c(n: int):

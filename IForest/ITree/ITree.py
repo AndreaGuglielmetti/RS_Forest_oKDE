@@ -29,3 +29,10 @@ class ITree:
         for i, x in enumerate(X):
             depths[i] = self.root.profile(x, 0)
         return depths
+
+    def score(self, X: np.ndarray):
+        X = X[:, self.features_indices]
+        scores = np.zeros(X.shape[0])
+        for i, x in enumerate(X):
+            scores[i] = self.root.score(x)
+        return scores
