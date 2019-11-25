@@ -33,11 +33,13 @@ class ITree:
     def score(self, X: np.ndarray):
         '''
         :param X: ndarray, shape(n_samples, n_dimensions)
-        :return: ndarray, shape(n_samples, 2), the first column is the leaf cardinality which contains the
-        sample x, the second column is the log ratio of the leaf volume with features volume
+        :return: tuple(ndarray, ndarray, INode)
         '''
         X = X[:, self.features_indices]
-        scores = np.zeros((X.shape[0], 2))
+        leaf_size = np.empty(X.shape[0])
+        log_scaled_ratio = np.empty(X.shape[0])
+        arrival_nodes = []
         for i, x in enumerate(X):
-            scores[i] = self.root.score(x)
-        return scores
+            leaf_size[i], log_scaled_ratio[i], node = self.root.score(x)
+            arrival_nodes.append(node)
+        return leaf_size, log_scaled_ratio, arrival_nodes

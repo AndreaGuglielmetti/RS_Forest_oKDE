@@ -61,7 +61,7 @@ class INode:
 
     def score(self, x: np.ndarray):
         if self.leaf:
-            return self.size, self.logScaledRatio
+            return self.size, self.logScaledRatio, self
         elif x[self.splitAtt] <= self.splitValue:
             return self.left.score(x)
         else:
