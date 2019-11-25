@@ -44,6 +44,9 @@ class ITree:
             leaf_size[i], log_scaled_ratio[i] = self.root.score(x, active_profile)
         return leaf_size, log_scaled_ratio
 
+    def get_terminal_node(self, X: np.ndarray, active_profile: int):
+        terminal_nodes = [self.root.get_terminal_node(x, active_profile) for x in X]
+
     def update_tree(self, arrival_nodes: List[INode], is_anomaly: List[bool], X: np.ndarray, active_profile: int):
         for i, arrival_node in enumerate(arrival_nodes):
             arrival_node.update_path(is_anomaly[i], X[i], active_profile)

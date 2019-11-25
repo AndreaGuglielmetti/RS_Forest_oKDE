@@ -79,6 +79,14 @@ class IForest:
         '''
         return np.exp(np.log(leaf_size) - log_scaled_ratio - np.log(self.max_samples))
 
+    def get_terminal_nodes(self, X: np.ndarray):
+        with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
+            futures = []
+            for i in range(self.n_estimators):
+                futures.append(executor.submit(self.trees[i].get_terminal_node, X, self.active_profile))
+            wait(futures)
+            return [future.result() for future in futures]
+
     def update_model(self, arrival_nodes_per_tree: List[List['INode']], is_anomaly: List[bool], X: np.ndarray):
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             futures = []

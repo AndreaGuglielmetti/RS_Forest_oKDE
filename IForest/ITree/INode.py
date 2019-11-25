@@ -110,3 +110,11 @@ class INode:
             return 1.
         else:
             return 2.0 * (np.log(n - 1.0) + np.euler_gamma) - 2.0 * (n - 1.0) / n
+
+    def get_terminal_node(self, x: np.ndarray, active_profile: int):
+        if self.leaf:
+            return self
+        elif x[self.splitAtt] <= self.splitValue:
+            self.left.get_terminal_node(x, active_profile)
+        else:
+            self.right.get_terminal_node(x, active_profile)
