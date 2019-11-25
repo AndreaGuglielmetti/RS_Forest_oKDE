@@ -60,8 +60,8 @@ class INode:
             return self.right.profile(x, e + 1, active_profile)
 
     def score(self, x: np.ndarray, active_profile: int=0):
-        if self.leaf:
-            return self.size[active_profile], self.logScaledRatio, self
+        if self.leaf:            
+            return self.size[active_profile], self.logScaledRatio
         elif x[self.splitAtt] <= self.splitValue:
             return self.left.score(x, active_profile)
         else:

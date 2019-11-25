@@ -64,12 +64,11 @@ class IForest:
                 futures.append(executor.submit(self.trees[i].score, X, self.active_profile))
             wait(futures)
             score = np.zeros(X.shape[0])
-            arrival_node_per_tree = []
             for future in futures:
-                leaf_size, log_scaled_ratio, arrival_node = future.result()
+                leaf_size = future.result()[:, 0]
+                log_scaled_ratio = future.result()[:, 1]
                 score += self._compute_score(leaf_size, log_scaled_ratio)
-                arrival_node_per_tree.append(arrival_node)
-        return score, arrival_node_per_tree
+        return score
 
     def _compute_score(self, leaf_size: np.ndarray, log_scaled_ratio: np.ndarray):
         '''

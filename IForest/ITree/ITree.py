@@ -34,16 +34,14 @@ class ITree:
     def score(self, X: np.ndarray, active_profile: int):
         '''
         :param X: ndarray, shape(n_samples, n_dimensions)
-        :return: tuple(ndarray, ndarray, INode)
+        :return: ndarray, shape(n_samples, 2), the first column is the leaf cardinality which contains the
+        sample x, the second column is the log ratio of the leaf volume with features volume
         '''
         X = X[:, self.features_indices]
-        leaf_size = np.empty(X.shape[0])
-        log_scaled_ratio = np.empty(X.shape[0])
-        arrival_nodes = []
+        scores = np.zeros((X.shape[0], 2))
         for i, x in enumerate(X):
-            leaf_size[i], log_scaled_ratio[i], node = self.root.score(x, active_profile)
-            arrival_nodes.append(node)
-        return leaf_size, log_scaled_ratio, arrival_nodes
+            leaf_size[i], log_scaled_ratio[i] = self.root.score(x, active_profile)
+        return leaf_size, log_scaled_ratio
 
     def update_tree(self, arrival_nodes: List[INode], is_anomaly: List[bool], X: np.ndarray, active_profile: int):
         for i, arrival_node in enumerate(arrival_nodes):
