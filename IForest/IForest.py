@@ -14,6 +14,7 @@ class IForest:
     max_samples: int
     max_features: float
     features_weight: np.ndarray
+    active_profile: int
 
     def __init__(self, n_estimators: int = 100, max_samples: int = 256, max_features: float = 1.0,
                  features_weight: np.ndarray = None):
@@ -21,6 +22,7 @@ class IForest:
         self.max_samples = max_samples
         self.max_features = max_features
         self.features_weight = features_weight
+        self.active_profile = 0
         assert 0. <= self.max_features <= 1.
 
     # Fit all the required estimators
@@ -49,7 +51,7 @@ class IForest:
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             futures = []
             for i in range(self.n_estimators):
-                futures.append(executor.submit(self.trees[i].profile, X))
+                futures.append(executor.submit(self.trees[i].profile, X, self.active_profile))
             wait(futures)
             depths = np.asarray([future.result() for future in futures]).T
         return depths
@@ -58,7 +60,7 @@ class IForest:
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             futures = []
             for i in range(self.n_estimators):
-                futures.append(executor.submit(self.trees[i].score, X))
+                futures.append(executor.submit(self.trees[i].score, X, self.active_profile))
             wait(futures)
             score = np.zeros(X.shape[0])
             arrival_node_per_tree = []
@@ -82,5 +84,6 @@ class IForest:
             futures = []
             for i in range(self.n_estimators):
                 arrival_nodes = arrival_nodes_per_tree[i]
-                futures.append(executor.submit(self.trees[i].update_tree, arrival_nodes, is_anomaly, X))
+                futures.append(executor.submit(self.trees[i].update_tree, arrival_nodes, is_anomaly, X, self.active_profile))
             wait(futures)
+            self.active_profile = abs(self.active_profile - 1) # change from 0 to 1 and viceversa

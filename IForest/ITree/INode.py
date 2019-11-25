@@ -7,7 +7,7 @@ import numpy as np
 # INode class
 class INode:
     leaf: bool
-    size: int
+    size: np.ndarray
     boundaries: np.ndarray
     splitAtt: int
     splitValue: int
@@ -17,7 +17,7 @@ class INode:
     # Fit the node and eventually create its children
     def fit(self, X: np.ndarray, e: int, l: int, fw: np.ndarray, parent: 'INode' = None, prev_random_value: float = 1.):
         self.leaf = True
-        self.size = X.shape[0]
+        self.size = np.ndarray([X.shape[0], 0])
         self.boundaries = np.apply_along_axis(lambda x: (x.min(), x.max()), axis=0, arr=X).T
         self.parent = parent
         if parent is not None:
@@ -51,32 +51,32 @@ class INode:
         return self
 
     # Profile the passed sample, returning the depth of the leaf it falls into
-    def profile(self, x: np.ndarray, e: int):
+    def profile(self, x: np.ndarray, e: int, active_profile: int=0):
         if self.leaf:
-            return e + self.c(self.size)
+            return e + self.c(self.size[active_profile])
         if x[self.splitAtt] <= self.splitValue:
-            return self.left.profile(x, e + 1)
+            return self.left.profile(x, e + 1, active_profile)
         else:  # x[self.splitAtt] > self.splitValue
-            return self.right.profile(x, e + 1)
+            return self.right.profile(x, e + 1, active_profile)
 
-    def score(self, x: np.ndarray):
+    def score(self, x: np.ndarray, active_profile: int=0):
         if self.leaf:
-            return self.size, self.logScaledRatio, self
+            return self.size[active_profile], self.logScaledRatio, self
         elif x[self.splitAtt] <= self.splitValue:
-            return self.left.score(x)
+            return self.left.score(x, active_profile)
         else:
-            return self.right.score(x)
+            return self.right.score(x, active_profile)
         pass
 
-    def update_path(self, is_anomaly: bool, x: np.ndarray):
+    def update_path(self, is_anomaly: bool, x: np.ndarray, active_profile: int=0):
         if is_anomaly:
             if self.parent is not None:
-                self.parent.size -= 1
-                self.parent.update_path(is_anomaly)
+                self.parent.size[active_profile] -= 1
+                self.parent.update_path(is_anomaly, x, active_profile)
         else:
             if not self.leaf:
                 child = self.get_child(x)
-                child._update_child(x)
+                child._update_child(x, active_profile)
             pass
         pass
 
@@ -88,11 +88,11 @@ class INode:
         else:
             return self.right
 
-    def _update_child(self, x):
-        self.size += 1
+    def _update_child(self, x, active_profile: int=0):
+        self.size[active_profile] += 1
         child = self.get_child(x)
         if child is not None:
-            self._update_child(x)
+            self._update_child(x, active_profile)
 
 
     @staticmethod
