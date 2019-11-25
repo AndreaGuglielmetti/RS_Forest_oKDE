@@ -94,6 +94,13 @@ class INode:
         if child is not None:
             self._update_child(x, active_profile)
 
+    def reset_profile(self, active_profile: int):
+        self.size[active_profile] = 0
+        futures = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures.append(executor.submit(self.left.reset_profile, active_profile))
+            futures.append(executor.submit(self.right.reset_profile, active_profile))
+        wait(futures)
 
     @staticmethod
     def c(n: int):

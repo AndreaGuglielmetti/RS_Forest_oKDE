@@ -48,3 +48,6 @@ class ITree:
     def update_tree(self, arrival_nodes: List[INode], is_anomaly: List[bool], X: np.ndarray, active_profile: int):
         for i, arrival_node in enumerate(arrival_nodes):
             arrival_node.update_path(is_anomaly[i], X[i], active_profile)
+
+    def reset_profile(self, active_profile: int):
+        self.root.reset_profile(active_profile)

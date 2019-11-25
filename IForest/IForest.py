@@ -41,7 +41,8 @@ class IForest:
                 features_indices = np.random.choice(range(X.shape[1]), size=int(self.max_features), replace=False)
                 futures.append(executor.submit(ITree(features_indices).fit,
                                                X[samples_indices],
-                                               self.features_weight[features_indices]/sum(self.features_weight[features_indices])))
+                                               self.features_weight[features_indices] / sum(
+                                                   self.features_weight[features_indices])))
             wait(futures)
             self.trees = [future.result() for future in futures]
 
@@ -84,6 +85,10 @@ class IForest:
             futures = []
             for i in range(self.n_estimators):
                 arrival_nodes = arrival_nodes_per_tree[i]
-                futures.append(executor.submit(self.trees[i].update_tree, arrival_nodes, is_anomaly, X, self.active_profile))
+                futures.append(executor.submit(self.trees[i].update_tree, arrival_nodes, is_anomaly, X,
+                                               abs(self.active_profile - 1)))
             wait(futures)
-            self.active_profile = abs(self.active_profile - 1) # change from 0 to 1 and viceversa
+            self.active_profile = abs(self.active_profile - 1)  # change from 0 to 1 and viceversa
+            for i in range(self.n_estimators):
+                futures.append(executor.submit(self.trees[i].reset_profile, self.active_profile))
+            wait(futures)
