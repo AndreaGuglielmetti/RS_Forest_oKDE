@@ -61,8 +61,16 @@ class IForest:
             wait(futures)
             score = np.zeros(X.shape[0])
             for future in futures:
-                score += self._compute_score(*future.result())
+                leaf_size = future.result()[:, 0]
+                log_scaled_ratio = future.result()[:, 1]
+                score += self._compute_score(leaf_size, log_scaled_ratio)
         return score
 
-    def _compute_score(self, leaf_size, log_scale_ratio):
-        res = np.exp(np.log(leaf_size) - log_scale_ratio - np.log(self.max_samples))
+    def _compute_score(self, leaf_size: np.ndarray, log_scaled_ratio: np.ndarray):
+        '''
+        Computes the density associated to each samples based on the node in which they fall.
+        :param leaf_size: ndarray (n_samples, ), the number of samples contained in the leaf where sample falls.
+        :param log_scale_ratio: ndarray (n_samples, ), the leaf log-scaled volume ratio where sample falls.
+        :return:
+        '''
+        return np.exp(np.log(leaf_size) - log_scaled_ratio - np.log(self.max_samples))
