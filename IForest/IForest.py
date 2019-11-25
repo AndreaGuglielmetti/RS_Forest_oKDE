@@ -59,7 +59,9 @@ class IForest:
             for i in range(self.n_estimators):
                 futures.append(executor.submit(self.trees[i].score, X))
             wait(futures)
-            score = np.sum([future.result() for future in futures])
+            score = np.zeros(X.shape[0])
+            for future in futures:
+                score += self._compute_score(*future.result())
         return score
 
     def _compute_score(self, leaf_size, log_scale_ratio):
