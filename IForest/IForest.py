@@ -4,6 +4,7 @@ from concurrent.futures import (ThreadPoolExecutor,
                                 wait)
 from math import ceil
 import numpy as np
+from typing import List
 
 
 # Isolation forest class
@@ -75,3 +76,11 @@ class IForest:
         :return:
         '''
         return np.exp(np.log(leaf_size) - log_scaled_ratio - np.log(self.max_samples))
+
+    def update_model(self, arrival_nodes_per_tree: List[List['INode']], is_anomaly: List[bool], X: np.ndarray):
+        with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
+            futures = []
+            for i in range(self.n_estimators):
+                arrival_nodes = arrival_nodes_per_tree[i]
+                futures.append(executor.submit(self.trees[i].update_tree, arrival_nodes, is_anomaly, X))
+            wait(futures)

@@ -68,6 +68,33 @@ class INode:
             return self.right.score(x)
         pass
 
+    def update_path(self, is_anomaly: bool, x: np.ndarray):
+        if is_anomaly:
+            if self.parent is not None:
+                self.parent.size -= 1
+                self.parent.update_path(is_anomaly)
+        else:
+            if not self.leaf:
+                child = self.get_child(x)
+                child._update_child(x)
+            pass
+        pass
+
+    def get_child(self, x):
+        if self.leaf:
+            return None
+        elif x[self.splitAtt] <= self.splitValue:
+            return self.left
+        else:
+            return self.right
+
+    def _update_child(self, x):
+        self.size += 1
+        child = self.get_child(x)
+        if child is not None:
+            self._update_child(x)
+
+
     @staticmethod
     def c(n: int):
         if n <= 1:

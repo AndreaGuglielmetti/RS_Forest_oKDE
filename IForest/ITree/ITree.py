@@ -2,6 +2,7 @@
 from .INode import INode
 from math import ceil
 import numpy as np
+from typing import List
 
 
 # ITree class
@@ -43,3 +44,7 @@ class ITree:
             leaf_size[i], log_scaled_ratio[i], node = self.root.score(x)
             arrival_nodes.append(node)
         return leaf_size, log_scaled_ratio, arrival_nodes
+
+    def update_tree(self, arrival_nodes: List[INode], is_anomaly: List[bool], X: np.ndarray):
+        for i, arrival_node in enumerate(arrival_nodes):
+            arrival_node.update_path(is_anomaly[i], X[i])
