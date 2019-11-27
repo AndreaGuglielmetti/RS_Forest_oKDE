@@ -18,7 +18,8 @@ class ITree:
         # Keep only features selected
         X = X[:, self.features_indices]
         # Build all nodes of the tree
-        self.root = INode().fit(X, 0, ceil(np.log2(X.shape[0])), features_weight)
+        # self.root = INode().fit(X, 0, ceil(np.log2(X.shape[0])), features_weight)
+        self.root = INode().fit(X, 0, 4, features_weight)
         return self
 
     # Profile all the passed samples

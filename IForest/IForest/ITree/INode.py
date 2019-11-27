@@ -17,7 +17,7 @@ class INode:
     # Fit the node and eventually create its children
     def fit(self, X: np.ndarray, e: int, l: int, fw: np.ndarray, parent: 'INode' = None, prev_random_value: float = 1.):
         self.leaf = True
-        self.size = np.ndarray([X.shape[0], 0])
+        self.size = np.array([X.shape[0], 0])
         self.boundaries = np.apply_along_axis(lambda x: (x.min(), x.max()), axis=0, arr=X).T
         self.parent = parent
         if parent is not None:
@@ -51,7 +51,7 @@ class INode:
         return self
 
     # Profile the passed sample, returning the depth of the leaf it falls into
-    def profile(self, x: np.ndarray, e: int, active_profile: int=0):
+    def profile(self, x: np.ndarray, e: int, active_profile: int = 0):
         if self.leaf:
             return e + self.c(self.size[active_profile])
         if x[self.splitAtt] <= self.splitValue:
@@ -59,7 +59,7 @@ class INode:
         else:  # x[self.splitAtt] > self.splitValue
             return self.right.profile(x, e + 1, active_profile)
 
-    def score(self, x: np.ndarray, active_profile: int=0):
+    def score(self, x: np.ndarray, active_profile: int = 0):
         if self.leaf:            
             return self.size[active_profile], self.logScaledRatio
         elif x[self.splitAtt] <= self.splitValue:
@@ -68,7 +68,7 @@ class INode:
             return self.right.score(x, active_profile)
         pass
 
-    def update_path(self, is_anomaly: bool, x: np.ndarray, active_profile: int=0):
+    def update_path(self, is_anomaly: bool, x: np.ndarray, active_profile: int = 0):
         if is_anomaly:
             if self.parent is not None:
                 self.parent.size[active_profile] -= 1
@@ -80,7 +80,7 @@ class INode:
             pass
         pass
 
-    def get_child(self, x):
+    def get_child(self, x) -> 'INode':
         if self.leaf:
             return None
         elif x[self.splitAtt] <= self.splitValue:

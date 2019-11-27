@@ -38,7 +38,8 @@ class IForest:
             futures = []
             for i in range(self.n_estimators):
                 samples_indices = np.random.choice(range(X.shape[0]), size=self.max_samples, replace=False)
-                features_indices = np.random.choice(range(X.shape[1]), size=int(self.max_features), replace=False)
+                # features_indices = np.random.choice(range(X.shape[1]), size=int(self.max_features), replace=False)
+                features_indices = np.arange(X.shape[1])
                 futures.append(executor.submit(ITree(features_indices).fit,
                                                X[samples_indices],
                                                self.features_weight[features_indices] / sum(
@@ -65,8 +66,7 @@ class IForest:
             wait(futures)
             score = np.zeros(X.shape[0])
             for future in futures:
-                leaf_size = future.result()[:, 0]
-                log_scaled_ratio = future.result()[:, 1]
+                leaf_size, log_scaled_ratio = future.result()
                 score += self._compute_score(leaf_size, log_scaled_ratio)
         return score
 
