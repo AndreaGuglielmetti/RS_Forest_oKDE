@@ -8,19 +8,23 @@ class RSTree:
 
     def fit(self, samples: np.ndarray, bounds: np.ndarray, max_depth, current_profile):
         self.root = RSNode()
-        self.root = self.root.build_structure(bounds, curr_depth=0, max_depth=max_depth, parent=None, prev_random_value=1.)
-        self.root = self.root.populate_tree(samples, current_profile)
+        self.root = self.root.build_structure(bounds, samples, current_profile, curr_depth=0, max_depth=max_depth, parent=None, prev_random_value=1.)
+        # self.root = self.root.populate_tree(samples, current_profile)
         return self
 
     def score(self, samples: np.ndarray, current_profile: int):
-        leaf_size = np.empty((samples.shape[0]))
-        log_scaled_ratio = np.empty((samples.shape[0]))
+        leaf_size = np.empty(samples.shape[0])
+        log_scaled_ratio = np.empty(samples.shape[0])
         for i, sample in enumerate(samples):
             leaf_size[i], log_scaled_ratio[i] = self.root.score(sample, current_profile)
         return leaf_size, log_scaled_ratio
 
     def get_terminal_node(self, samples: np.ndarray):
-        return [self.root.get_terminal_node(sample) for sample in samples]
+        nodes = []
+        for sample in samples:
+            nodes.append(self.root.get_terminal_node(sample))
+        return nodes
+        # return [self.root.get_terminal_node(sample) for sample in samples]
 
     def update_tree(self, arrival_nodes: List[RSNode], samples: np.ndarray,
                     current_profile: int, is_anomaly: List[bool] = None):

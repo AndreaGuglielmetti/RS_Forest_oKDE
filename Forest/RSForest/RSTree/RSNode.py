@@ -13,7 +13,8 @@ class RSNode:
     split_attr: int
     split_value: float
 
-    def build_structure(self, bounds: np.ndarray, curr_depth: int, max_depth: int,
+    def build_structure(self, bounds: np.ndarray, samples: np.ndarray, current_profile: int,
+                        curr_depth: int, max_depth: int,
                         parent: 'RSNode' = None, prev_random_value: float = 1.0):
         '''
         Initialize node attributes and recursively generate nodes.
@@ -24,18 +25,21 @@ class RSNode:
         :param prev_random_value: float, value in [0, 1] chosen as split value.
         '''
         # creat a leaf
-        if curr_depth > max_depth:
+        if curr_depth >= max_depth or samples.shape[0] <= 1:
             self.leaf = True
             self.size = np.zeros(2)
+            self.size[current_profile] = samples.shape[0]
             self.parent = parent
             self.log_scaled_ratio = parent.log_scaled_ratio + log(prev_random_value)
-            return
+            return self
         # creat an internal node and its children
         self.leaf = False
+        self.size = np.zeros(2)
+        self.size[current_profile] = samples.shape[0]
         indices = np.arange(bounds.shape[0])[np.apply_along_axis(lambda x: not np.isclose(x, x[0]).all(),
                                                                  axis=0, arr=bounds)]
         self.split_attr = np.random.choice(indices)
-        random_value = np.random.uniform()
+        random_value = np.random.uniform(1e-100, 1)
         self.split_value = bounds[self.split_attr, 0] + random_value * (bounds[self.split_attr, 1] -
                                                                         bounds[self.split_attr, 0])
         left_bounds = bounds.copy()
@@ -50,32 +54,40 @@ class RSNode:
 
         futures = []
         with ThreadPoolExecutor(max_workers=2) as executor:
-            futures.append(executor.submit(RSNode.build_structure,
-                                           left_bounds, curr_depth + 1, max_depth,
+            futures.append(executor.submit(RSNode().build_structure,
+                                           left_bounds, samples[samples[:, self.split_attr] <= self.split_value],
+                                           current_profile,
+                                           curr_depth + 1, max_depth,
                                            self, random_value))
-            futures.append(executor.submit(RSNode.build_structure,
-                                           right_bounds, curr_depth + 1, max_depth,
+            futures.append(executor.submit(RSNode().build_structure,
+                                           right_bounds,
+                                           samples[samples[:, self.split_attr] > self.split_value],
+                                           current_profile,
+                                           curr_depth + 1, max_depth,
                                            self, 1 - random_value))
         wait(futures)
         self.left = futures[0].result()
         self.right = futures[1].result()
-        return  self
+        return self
 
     def populate_tree(self, samples: np.ndarray, current_profile: int):
         self.size[current_profile] = samples.shape[0]
         if self.leaf:
-            return
+            return self
         futures = []
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures.append(executor.submit(self.left.populate_tree,
-                                           samples[samples[:, self.split_attr] <= self.split_value]))
+                                           samples[samples[:, self.split_attr] <= self.split_value],
+                                           current_profile))
             futures.append(executor.submit(self.right.populate_tree,
-                                           samples[samples[: self.split_attr] > self.split_attr]))
+                                           samples[samples[:, self.split_attr] > self.split_value],
+                                           current_profile))
         wait(futures)
         return self
 
     def update(self, sample: np.ndarray, current_profile: int, is_anomaly: bool):
         if not is_anomaly:
+
             if not self.leaf:
                 child = self.get_child(sample)
                 child._update_child(sample, current_profile)
@@ -112,15 +124,15 @@ class RSNode:
         wait(futures)
 
     def get_terminal_node(self, sample: np.ndarray):
-        if self.left:
+        if self.leaf:
             return self
         elif sample[self.split_attr] <= self.split_value:
-            self.left.get_terminal_node(sample)
+            return self.left.get_terminal_node(sample)
         else:
-            self.right.get_terminal_node(sample)
+            return self.right.get_terminal_node(sample)
 
     def score(self, sample: np.ndarray, current_profile: int):
-        if self.left:
+        if self.leaf:
             return self.size[current_profile], self.log_scaled_ratio
         elif sample[self.split_attr] <= self.split_value:
             return self.left.score(sample, current_profile)
