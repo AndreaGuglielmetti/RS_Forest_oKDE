@@ -1,6 +1,6 @@
 import numpy as np
 from math import log
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 class RSTreeArrayBased:
@@ -80,3 +80,43 @@ class RSTreeArrayBased:
                 np.where(samples[valid_indexes, self.split_attr[node_id]] <= self.split_value[node_id])[0]]
             valid_index_per_node[self.children_right[node_id]] = valid_indexes[
                 np.where(samples[valid_indexes, self.split_attr[node_id]] > self.split_value[node_id])[0]]
+
+    def _navigate_tree(self, sample: np.ndarray, current_profile: int, depth: int = -1) -> int:
+        current_node = 0
+        depth_counter = 0
+        while True:
+            if depth_counter <= depth:
+                return current_node
+            if self.size[current_profile, current_node] <= self.node_size_limit or \
+                    self.children_left[current_node] == self.TREE_LEAF:
+                return current_node
+            elif sample[self.split_attr[current_node]] <= self.split_value[current_node]:
+                current_node = self.children_left[current_node]
+            else:
+                current_node = self.children_right[current_node]
+            depth_counter += 1
+
+    def score(self, samples: np.ndarray, current_profile: int) -> Tuple[np.ndarray, np.ndarray]:
+        terminal_size = np.empty(samples.shape[0])
+        log_scaled_ratio = np.empty(samples.shape[0])
+        for i, sample in enumerate(samples):
+            terminal_node = self._navigate_tree(sample, current_profile)
+            terminal_size[i] = self.size[current_profile, terminal_node]
+            log_scaled_ratio[i] = self.log_scaled_ratio[terminal_node]
+        return terminal_size, log_scaled_ratio
+
+    def get_terminal_node(self, samples: np.ndarray) -> List[int]:
+        return [self._navigate_tree(sample) for sample in samples]
+
+    def update_tree(self, terminal_nodes: List[int], samples: np.ndarray, profile_to_update: int,
+                    is_anomaly: List[bool] = None) -> None:
+        if is_anomaly is None:
+            for i, sample in enumerate(samples):
+                self._update_tree(terminal_nodes[i], sample, profile_to_update, False)
+
+    def _update_tree(self, terminal_node: int, sample: np.ndarray, profile: int, is_anomaly: bool) -> None:
+        if not is_anomaly:
+            current_node_size = self.size[profile, terminal_node]
+            if current_node_size > self.node_size_limit and self.children_left[terminal_node] != self.TREE_LEAF:
+                pass
+
