@@ -1,25 +1,27 @@
 from concurrent.futures import ThreadPoolExecutor, wait
 import numpy as np
-from .RSTree import RSTree
+from .RSTree import RSTreeArrayBased
 from .RSTree.RSNode import RSNode
 from typing import List
-from math import log
+from math import log, ceil
 
 
 class RSForest:
-    trees: List[RSTree]
+    trees: List[RSTreeArrayBased]
     n_estimators: int
     max_samples: int
     log_max_samples: float
     current_profile: int
     feature_volume: float
+    max_node_size: int
 
-    def __init__(self, n_estimators: int = 100, max_depth: int = 8, max_samples: int = 256):
+    def __init__(self, n_estimators: int = 100, max_depth: int = 8, max_samples: int = 256, max_node_size: float = 1.):
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.max_depth = max_depth
         self.current_profile = 0
         self.feature_volume = 0.
+        self.max_node_size = ceil(max_samples * max_node_size)
 
     def fit(self, samples: np.ndarray, enlarge_bounds: bool = False):
         self.max_samples = min(self.max_samples, samples.shape[0])
@@ -34,8 +36,8 @@ class RSForest:
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             futures = []
             for i in range(self.n_estimators):
-                futures.append(executor.submit(RSTree().fit,
-                                               samples[indices], bounds, self.max_depth, self.current_profile))
+                futures.append(executor.submit(RSTreeArrayBased(self.max_depth, self.max_node_size).fit,
+                                               bounds, samples[indices]))
             wait(futures)
         self.trees = [future.result() for future in futures]
 

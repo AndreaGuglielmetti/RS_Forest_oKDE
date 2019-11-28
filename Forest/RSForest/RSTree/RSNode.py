@@ -87,7 +87,6 @@ class RSNode:
 
     def update(self, sample: np.ndarray, current_profile: int, is_anomaly: bool):
         if not is_anomaly:
-
             if not self.leaf:
                 child = self.get_child(sample)
                 child._update_child(sample, current_profile)
