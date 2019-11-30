@@ -79,7 +79,7 @@ class RSForest:
             np.log(leaf_size[not_zero_leaves]) - log_scaled_ratio[not_zero_leaves] - self.log_max_samples)
         return scores
 
-    def update_forest(self, samples: np.ndarray, arrival_nodes: List[RSNode]):
+    def update_forest(self, samples: np.ndarray, arrival_nodes: List[int]):
         futures = []
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             for i in range(self.n_estimators):
@@ -93,12 +93,12 @@ class RSForest:
         wait(futures)
         self.current_profile = abs(self.current_profile - 1)
 
-    def get_terminal_node(self, samples):
+    def get_terminal_node(self, samples: np.ndarray) -> List[List[int]]:
         futures = []
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             for i in range(self.n_estimators):
                 futures.append(executor.submit(self.trees[i].get_terminal_node,
-                                               samples))
+                                               samples, self.current_profile))
         wait(futures)
         arrival_nodes = []
         for future in futures:
