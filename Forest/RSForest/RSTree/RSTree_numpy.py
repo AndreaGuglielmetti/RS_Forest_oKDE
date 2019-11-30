@@ -1,9 +1,9 @@
 import numpy as np
 from math import log
 from typing import Dict, List, Tuple
-from queue import SimpleQueue
+from queue import Queue
 
-Q: 'Queue[int]' = SimpleQueue
+Q: 'Queue[int]' = Queue
 
 
 class RSTreeArrayBased:
@@ -18,7 +18,6 @@ class RSTreeArrayBased:
     first_leaf_index: int
     size: np.ndarray
     not_eval_nodes_info: Dict[int, Tuple[np.ndarray, float]]
-    prev_random_values: Dict[int, float]
 
     TREE_LEAF = -1
     TREE_UNDEFINED = -np.inf
@@ -35,13 +34,12 @@ class RSTreeArrayBased:
         self.log_scaled_ratio = self.TREE_UNDEFINED * np.ones(self.node_count)
         self.size = np.zeros((2, self.node_count), dtype=int)
         self.not_eval_nodes_info = {}
-        self.prev_random_values: {}
 
     def fit(self, bounds: np.ndarray, samples: np.ndarray) -> 'RSTreeArrayBased':
         self.not_eval_nodes_info[0] = (bounds, 0)
         valid_index_per_node = {node_id: [] for node_id in range(self.node_count)}
         valid_index_per_node[0] = list(range(samples.shape[0]))
-        node_queue = SimpleQueue()
+        node_queue = Queue()
         node_queue.put(0)
 
         while not node_queue.empty():
@@ -99,7 +97,6 @@ class RSTreeArrayBased:
                        node_queue: Q) -> None:
         valid_indexes = valid_index_per_node[node_id]
         self.size[0, node_id] = len(valid_indexes)
-
         # evaluate if the node needs children
         if self.size[0, node_id] > self.node_size_limit and node_id < self.first_leaf_index:
             left_valid_indexes = [valid_indexes[i] for i in np.where(
@@ -128,6 +125,37 @@ class RSTreeArrayBased:
             else:
                 current_node = self.children_right[current_node]
 
+    def _navigate_tree_down_multi(self, samples: np.ndarray, current_profile: int,
+                                  update_profile: bool) -> List[Tuple[int, np.ndarray]]:
+        node_queue = Queue()
+        node_queue.put((0, np.arange(samples.shape[0])))
+        profile_to_update = abs(current_profile - 1)
+        terminal_nodes = []
+        while not node_queue.empty():
+            current_node, current_samples = node_queue.get()
+            if update_profile:
+                self.size[profile_to_update, current_node] += current_samples.shape
+            if self.size[
+                current_profile, current_node] <= self.node_size_limit or current_node >= self.first_leaf_index:
+                terminal_nodes.append((current_node, current_samples))
+            else:
+                self._enqueue_children(current_node, current_samples, node_queue, samples)
+        return terminal_nodes
+
+    def _enqueue_children(self, current_node: int, current_samples: np.ndarray,
+                          node_queue: Q, samples: np.ndarray):
+        left_child = self.children_left[current_node]
+        left_samples = current_samples[
+            samples[current_samples, self.split_attr[current_node]] <= self.split_value[current_node]]
+        right_child = self.children_right[current_node]
+        right_samples = current_samples[
+            samples[current_samples, self.split_attr[current_node]] > self.split_value[current_node]]
+        for child, child_samples in zip([left_child, right_child], [left_samples, right_samples]):
+            if child in self.not_eval_nodes_info.keys():
+                self._build_node(child)
+            if child_samples.size > 0:
+                node_queue.put((child, child_samples))
+
     def _navigate_tree_up(self, starting_node: int = 0, depth: int = -1) -> int:
         if depth == -1 or starting_node == 0:
             return 0
@@ -140,46 +168,36 @@ class RSTreeArrayBased:
     def score(self, samples: np.ndarray, current_profile: int) -> Tuple[np.ndarray, np.ndarray]:
         terminal_size = np.empty(samples.shape[0])
         log_scaled_ratio = np.empty(samples.shape[0])
-        for i, sample in enumerate(samples):
-            terminal_node = self._navigate_tree_down(sample, current_profile, update_profile=True)
-            terminal_size[i] = self.size[current_profile, terminal_node]
-            log_scaled_ratio[i] = self.log_scaled_ratio[terminal_node]
+        result = self._navigate_tree_down_multi(samples, current_profile, update_profile=False)
+        for node, sample_idxs in result:
+            terminal_size[sample_idxs] = self.size[current_profile, node]
+            log_scaled_ratio[sample_idxs] = self.log_scaled_ratio[node]
         return terminal_size, log_scaled_ratio
 
-    def get_terminal_node(self, samples: np.ndarray, current_profile: int) -> List[int]:
-        return [self._navigate_tree_down(sample, current_profile, update_profile=False) for sample in samples]
+    def get_terminal_node(self, samples: np.ndarray, current_profile: int) -> List[Tuple[int, np.ndarray]]:
+        return self._navigate_tree_down_multi(samples, current_profile, update_profile=True)
 
-    def update_tree(self, terminal_nodes: List[int], samples: np.ndarray, profile_to_update: int,
-                    is_anomaly: List[bool] = None) -> None:
+    def update_tree(self, terminal_nodes: List[Tuple[int, np.ndarray]], samples: np.ndarray,
+                    profile_to_update: int, is_anomaly: List[bool] = None) -> None:
         if is_anomaly is None:
-            for i, sample in enumerate(samples):
-                self._update_tree(terminal_nodes[i], sample, profile_to_update, False)
+            self._update_tree(terminal_nodes, samples, profile_to_update)
 
-    def _update_tree(self, terminal_node: int, sample: np.ndarray, profile: int, is_anomaly: bool) -> None:
-        if not is_anomaly:
-            current_node_size = self.size[profile, terminal_node]
-            if current_node_size > self.node_size_limit and terminal_node < self.first_leaf_index:
-                child_node = self._get_child(terminal_node, sample)
-                while child_node < self.first_leaf_index:
-                    self.size[profile, child_node] += 1
-                    child_node = self._get_child(child_node, sample)
-        else:
-            ancestor = terminal_node
-            while ancestor != 0:
-                self.size[profile, ancestor] -= 1
-                ancestor = self._get_parent(ancestor)
+    def _update_tree(self, terminal_nodes: List[Tuple[int, np.ndarray]], samples: np.ndarray,
+                     profile_to_update: int) -> None:
+        for node, sample_idxs in terminal_nodes:
+            current_node_size = self.size[profile_to_update, node]
+            if current_node_size > self.node_size_limit and node < self.first_leaf_index:
+                self.size[profile_to_update, node] -= current_node_size
+                self._navigate_tree_down_multi(samples[sample_idxs], profile_to_update, update_profile=True)
 
-    def _get_child(self, starting_node: int, sample: np.ndarray) -> int:
-        if starting_node in self.not_eval_nodes_info.keys():
-            self._build_node(starting_node)
-        if sample[self.split_attr[starting_node]] <= self.split_value[starting_node]:
-            child_id = self.children_left[starting_node]
-        else:
-            child_id =  self.children_right[starting_node]
-        # if the node can have children but it was skipped
-        if child_id < self.first_leaf_index:
-            self._build_node(child_id)
-        return child_id
+    def _update_children(self, starting_node: int, samples: np.ndarray, profile_to_update: int) -> None:
+        node_queue = Queue()
+        node_queue.put((starting_node, np.arange(samples.shape[0])))
+        while not node_queue.empty():
+            current_node, current_samples = node_queue.get()
+            self.size[profile_to_update, current_node] += samples
+            if current_node < self.first_leaf_index:
+                self._enqueue_children(current_node, current_samples, node_queue, samples)
 
     def reset_profile(self, profile_to_erase: int) -> None:
         self.size[profile_to_erase] = 0

@@ -4,8 +4,8 @@ import numpy as np
 from scipy.stats import kde
 import time
 
-x: np.ndarray = np.random.standard_normal(size=10000)
-y: np.ndarray = np.random.standard_normal(size=10000)
+x = np.random.standard_normal(size=10000)
+y =  x + 3 * np.random.standard_normal(size=10000)
 
 nbins = 100
 # start = time.time()
@@ -24,10 +24,10 @@ samples = np.hstack((
     y.reshape((-1, 1))
 ))
 
-forest = RSForest(n_estimators=1, max_depth=7, max_samples=10000, max_node_size=.01)
+forest = RSForest(n_estimators=100, max_depth=15, max_samples=10000, max_node_size=.01)
 start = time.time()
 forest.fit(samples, enlarge_bounds=True)
-print(time.time() - start)
+print(f'Fitted {forest.max_samples} samples in {time.time() - start}')
 start = time.time()
 scores = forest.score(
     np.hstack((
@@ -36,35 +36,23 @@ scores = forest.score(
     )),
     normalize=True
 )
-print(time.time()-start)
+print(f'Scored {xi.size} samples in {time.time() - start}')
 plt.pcolormesh(xi, yi, scores.reshape(xi.shape))
 plt.colorbar()
 plt.show()
-#
-for _ in range(5):
+# #
+for _ in range(20):
     x: np.ndarray = np.random.standard_normal(size=10000)
-    y: np.ndarray = np.random.standard_normal(size=10000)
+    y: np.ndarray = x + 3 * np.random.standard_normal(size=10000)
     samples = np.hstack((
         x.reshape((-1, 1)),
         y.reshape((-1, 1))
     ))
 
-    # forest_test = RSForest(n_estimators=1, max_depth=7, max_samples=256, max_node_size=.1)
-    # forest_test.fit(samples, enlarge_bounds=True)
-    #
-    # scores = forest_test.score(
-    #     np.hstack((
-    #         xi.flatten().reshape((-1, 1)),
-    #         yi.flatten().reshape((-1, 1))
-    #     )),
-    #     normalize=True
-    # )
-    # plt.pcolormesh(xi, yi, scores.reshape(xi.shape))
-    # plt.colorbar()
-    # plt.show()
-
-    arr_nodes = forest.get_terminal_node(samples)
-    forest.update_forest(samples, arr_nodes)
+    start = time.time()
+    forest.update_forest(samples)
+    print(f'Model updated in {time.time() - start}')
+    start = time.time()
     scores = forest.score(
         np.hstack((
             xi.flatten().reshape((-1, 1)),
@@ -72,6 +60,7 @@ for _ in range(5):
         )),
         normalize=True
     )
+    print(f'Scored {xi.size} samples in {time.time() - start}')
     plt.pcolormesh(xi, yi, scores.reshape(xi.shape))
     plt.colorbar()
     plt.show()

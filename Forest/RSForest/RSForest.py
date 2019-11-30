@@ -79,7 +79,8 @@ class RSForest:
             np.log(leaf_size[not_zero_leaves]) - log_scaled_ratio[not_zero_leaves] - self.log_max_samples)
         return scores
 
-    def update_forest(self, samples: np.ndarray, arrival_nodes: List[int]):
+    def update_forest(self, samples: np.ndarray):
+        arrival_nodes = self.get_terminal_node(samples)
         futures = []
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             for i in range(self.n_estimators):
