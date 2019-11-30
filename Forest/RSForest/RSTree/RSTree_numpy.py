@@ -133,6 +133,8 @@ class RSTreeArrayBased:
         terminal_nodes = []
         while not node_queue.empty():
             current_node, current_samples = node_queue.get()
+            if self.log_scaled_ratio[current_node] == self.TREE_UNDEFINED:
+                self._build_node(current_node)
             if update_profile:
                 self.size[profile_to_update, current_node] += current_samples.shape
             if self.size[
