@@ -1,9 +1,9 @@
 import numpy as np
 from math import log
 from typing import Dict, List, Tuple
-from queue import Queue
+from queue import SimpleQueue
 
-Q: 'Queue[int]' = Queue
+Q: 'SimpleQueue[int]' = SimpleQueue
 
 
 class RSTreeArrayBased:
@@ -39,7 +39,7 @@ class RSTreeArrayBased:
         self.not_eval_nodes_info[0] = (bounds, 0)
         valid_index_per_node = {node_id: [] for node_id in range(self.node_count)}
         valid_index_per_node[0] = list(range(samples.shape[0]))
-        node_queue = Queue()
+        node_queue = SimpleQueue()
         node_queue.put(0)
 
         while not node_queue.empty():
@@ -127,7 +127,7 @@ class RSTreeArrayBased:
 
     def _navigate_tree_down_multi(self, samples: np.ndarray, current_profile: int,
                                   update_profile: bool) -> List[Tuple[int, np.ndarray]]:
-        node_queue = Queue()
+        node_queue = SimpleQueue()
         node_queue.put((0, np.arange(samples.shape[0])))
         profile_to_update = abs(current_profile - 1)
         terminal_nodes = []
@@ -193,7 +193,7 @@ class RSTreeArrayBased:
                 self._navigate_tree_down_multi(samples[sample_idxs], profile_to_update, update_profile=True)
 
     def _update_children(self, starting_node: int, samples: np.ndarray, profile_to_update: int) -> None:
-        node_queue = Queue()
+        node_queue = SimpleQueue()
         node_queue.put((starting_node, np.arange(samples.shape[0])))
         while not node_queue.empty():
             current_node, current_samples = node_queue.get()

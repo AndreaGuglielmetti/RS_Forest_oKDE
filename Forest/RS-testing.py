@@ -5,7 +5,7 @@ from scipy.stats import kde
 import time
 
 x = np.random.standard_normal(size=10000)
-y =  x + 3 * np.random.standard_normal(size=10000)
+y = np.random.standard_normal(size=10000)
 
 nbins = 100
 # start = time.time()
@@ -24,7 +24,7 @@ samples = np.hstack((
     y.reshape((-1, 1))
 ))
 
-forest = RSForest(n_estimators=100, max_depth=15, max_samples=10000, max_node_size=.01)
+forest = RSForest(n_estimators=20, max_depth=15, max_samples=10000, max_node_size=.01)
 start = time.time()
 forest.fit(samples, enlarge_bounds=True)
 print(f'Fitted {forest.max_samples} samples in {time.time() - start}')
@@ -43,7 +43,7 @@ plt.show()
 # #
 for _ in range(20):
     x: np.ndarray = np.random.standard_normal(size=10000)
-    y: np.ndarray = x + 3 * np.random.standard_normal(size=10000)
+    y: np.ndarray = np.random.standard_normal(size=10000)
     samples = np.hstack((
         x.reshape((-1, 1)),
         y.reshape((-1, 1))
