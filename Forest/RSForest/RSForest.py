@@ -1,9 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, wait
-import numpy as np
-from .RSTree import RSTreeArrayBased
-from .RSTree.RSNode import RSNode
-from typing import List
 from math import log, ceil
+from typing import List
+
+import numpy as np
+
+from RSTree.RSTree_numpy import RSTreeArrayBased
 
 
 class RSForest:
@@ -14,14 +15,16 @@ class RSForest:
     current_profile: int
     feature_volume: float
     max_node_size: int
+    boundaries: np.ndarray
 
-    def __init__(self, n_estimators: int = 100, max_depth: int = 8, max_samples: int = 256, max_node_size: float = 1.):
+    def __init__(self, n_estimators: int = 100, max_depth: int = 10, max_samples: int = 256, max_node_size: float = 0.1):
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.max_depth = max_depth
         self.current_profile = 0
         self.feature_volume = 0.
         self.max_node_size = ceil(max_samples * max_node_size)
+        self.boundaries = -np.inf
 
     def fit(self, samples: np.ndarray, enlarge_bounds: bool = False):
         self.max_samples = min(self.max_samples, samples.shape[0])
@@ -30,14 +33,14 @@ class RSForest:
             indices = np.random.choice(range(samples.shape[0]), size=self.max_samples, replace=False)
         else:
             indices = np.arange(self.max_samples)
-        bounds = self._compute_bounds(samples, enlarge_bounds)
-        self.feature_volume = float(np.prod(np.diff(bounds, axis=1)))
+        self.boundaries = self._compute_bounds(samples, enlarge_bounds)
+        self.feature_volume = float(np.prod(np.diff(self.boundaries, axis=1)))
 
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             futures = []
             for i in range(self.n_estimators):
                 futures.append(executor.submit(RSTreeArrayBased(self.max_depth, self.max_node_size).fit,
-                                               bounds, samples[indices]))
+                                               self.boundaries, samples[indices]))
             wait(futures)
         self.trees = [future.result() for future in futures]
 
@@ -55,7 +58,7 @@ class RSForest:
                 enlarged_ubound.reshape((-1, 1))
             ))
 
-    def score(self, samples: np.ndarray, normalize=False):
+    def score_samples(self, samples: np.ndarray, normalize=False):
         futures = []
         with ThreadPoolExecutor(max_workers=self.n_estimators) as executor:
             for i in range(self.n_estimators):
