@@ -27,11 +27,11 @@ class RSTreeArrayBased:
         self.node_size_limit = node_size_limit
         self.node_count = 2 ** (max_depth + 1) - 1
         self.first_leaf_index = 2 ** max_depth - 1
-        self.children_left = self.TREE_LEAF * np.ones(self.first_leaf_index, dtype=int)
-        self.children_right = self.TREE_LEAF * np.ones(self.first_leaf_index, dtype=int)
-        self.split_attr = self.TREE_LEAF * np.ones(self.node_count, dtype=int)
-        self.split_value = self.TREE_UNDEFINED * np.ones(self.node_count)
-        self.log_scaled_ratio = self.TREE_UNDEFINED * np.ones(self.node_count)
+        self.children_left = np.full(self.first_leaf_index, self.TREE_LEAF, dtype=int)
+        self.children_right = np.full(self.first_leaf_index, self.TREE_LEAF, dtype=int)
+        self.split_attr = np.full(self.node_count, self.TREE_LEAF, dtype=int)
+        self.split_value = np.full(self.node_count, self.TREE_UNDEFINED)
+        self.log_scaled_ratio = np.full(self.node_count, self.TREE_UNDEFINED)
         self.size = np.zeros((2, self.node_count), dtype=int)
         self.not_eval_nodes_info = {}
 
