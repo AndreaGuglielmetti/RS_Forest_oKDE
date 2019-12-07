@@ -43,6 +43,7 @@ class RSForest:
                                                self.boundaries, samples[indices]))
             wait(futures)
         self.trees = [future.result() for future in futures]
+        self.current_profile = 0
 
     @staticmethod
     def _compute_bounds(samples: np.ndarray, enlarge: bool):
