@@ -24,12 +24,12 @@ samples = np.hstack((
     y.reshape((-1, 1))
 ))
 
-forest = RSForest(n_estimators=20, max_depth=15, max_samples=10000, max_node_size=.01)
+forest = RSForest(n_estimators=100, max_depth=15, max_samples=10000, max_node_size=.01)
 start = time.time()
 forest.fit(samples, enlarge_bounds=True)
 print(f'Fitted {forest.max_samples} samples in {time.time() - start}')
 start = time.time()
-scores = forest.score(
+scores = forest.score_samples(
     np.hstack((
         xi.flatten().reshape((-1, 1)),
         yi.flatten().reshape((-1, 1))
@@ -53,7 +53,7 @@ for _ in range(20):
     forest.update_forest(samples)
     print(f'Model updated in {time.time() - start}')
     start = time.time()
-    scores = forest.score(
+    scores = forest.score_samples(
         np.hstack((
             xi.flatten().reshape((-1, 1)),
             yi.flatten().reshape((-1, 1))

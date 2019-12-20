@@ -3,7 +3,6 @@ from math import log, ceil
 from typing import List
 
 import numpy as np
-
 from RSTree.RSTree_numpy import RSTreeArrayBased
 
 
