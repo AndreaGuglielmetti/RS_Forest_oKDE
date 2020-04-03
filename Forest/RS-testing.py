@@ -1,23 +1,25 @@
-from Forest.RSForest.RSForest import RSForest
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import kde
 import time
 
+from Forest import RSForest
+
 x = np.random.standard_normal(size=10000)
 y = np.random.standard_normal(size=10000)
 
 nbins = 100
-# start = time.time()
-# k = kde.gaussian_kde([x, y])
-# print(time.time() - start)
+start = time.time()
+k = kde.gaussian_kde([x, y])
+print(time.time() - start)
 xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-# start = time.time()
-# zi = k(np.vstack([xi.flatten(), yi.flatten()]))
-# print(time.time() - start)
-# plt.pcolormesh(xi, yi, zi.reshape(xi.shape))
-# plt.colorbar()
-# plt.show()
+start = time.time()
+zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+print(time.time() - start)
+plt.pcolormesh(xi, yi, zi.reshape(xi.shape))
+plt.colorbar()
+plt.show()
 
 samples = np.hstack((
     x.reshape((-1, 1)),
