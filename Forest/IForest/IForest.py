@@ -1,5 +1,5 @@
 # Import libraries
-from .ITree import ITree
+from IForest.ITree import ITree
 from concurrent.futures import (ThreadPoolExecutor,
                                 wait)
 from math import ceil
